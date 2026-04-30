@@ -24,6 +24,7 @@ class VisualCutConfig:
     enabled: bool = True
     sensitivity: float = 1.0  # MEDIUM padrão
     sample_rate: int = 5  # analisa a cada N frames
+    min_clip_duration: float = 0.0  # duração mínima do clip em segundos (0 = sem limite)
 
 
 @dataclass
@@ -99,7 +100,8 @@ class ProcessingConfig:
             config.visual_cut = VisualCutConfig(
                 enabled=vc.get('enabled', True),
                 sensitivity=vc.get('sensitivity', 1.0),
-                sample_rate=vc.get('sample_rate', 5)
+                sample_rate=vc.get('sample_rate', 5),
+                min_clip_duration=vc.get('min_clip_duration', 0.0)
             )
         
         # Silence
@@ -151,7 +153,8 @@ class ProcessingConfig:
                 "visual_cut": {
                     "enabled": self.visual_cut.enabled,
                     "sensitivity": self.visual_cut.sensitivity,
-                    "sample_rate": self.visual_cut.sample_rate
+                    "sample_rate": self.visual_cut.sample_rate,
+                    "min_clip_duration": self.visual_cut.min_clip_duration
                 },
                 "silence_removal": {
                     "enabled": self.silence.enabled,

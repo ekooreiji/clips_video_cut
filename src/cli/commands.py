@@ -107,6 +107,12 @@ def cli():
     help="Processar todos os vídeos da pasta"
 )
 @click.option(
+    "--min-clip-duration",
+    type=float,
+    default=0.0,
+    help="Duração mínima do clip em segundos - apenas clips MAIORES que este valor serão gerados"
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -128,6 +134,7 @@ def process(
     destroy: bool,
     config: Optional[str],
     batch: Optional[str],
+    min_clip_duration: float,
     verbose: bool,
 ):
     """Processar vídeo para gerar clips automáticos"""
@@ -150,6 +157,7 @@ def process(
         processing_config.visual_cut.sensitivity = {
             "low": 0.3, "medium": 1.0, "high": 2.0
         }[sensitivity]
+        processing_config.visual_cut.min_clip_duration = min_clip_duration
         
         processing_config.silence.enabled = remove_silence
         processing_config.silence.db_threshold = silence_db

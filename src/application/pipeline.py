@@ -192,6 +192,7 @@ class VideoPipeline:
         logger.info(f"Config visual_cut.enabled: {self.config.visual_cut.enabled}")
         logger.info(f"Config sensitivity: {self.config.visual_cut.sensitivity}")
         logger.info(f"Config sample_rate: {self.config.visual_cut.sample_rate}")
+        logger.info(f"Config min_clip_duration: {self.config.visual_cut.min_clip_duration}")
         
         if not self.config.visual_cut.enabled:
             logger.info("Visual cut desabilitado, retornando []")
@@ -202,6 +203,13 @@ class VideoPipeline:
             sensitivity=self.config.visual_cut.sensitivity,
             sample_rate=self.config.visual_cut.sample_rate,
         )
+        
+        # Filtrar por duração mínima
+        min_duration = self.config.visual_cut.min_clip_duration
+        if min_duration > 0:
+            original_count = len(clips)
+            clips = [c for c in clips if c.duration >= min_duration]
+            logger.info(f"Filtrados {original_count - len(clips)} clips maiores ou iguais a {min_duration}s")
         
         logger.debug(f"Detectados {len(clips)} clips visuais")
         return clips
