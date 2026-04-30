@@ -1,0 +1,82 @@
+# MkDocs Configuration for Video Clips Automation
+# Documentation: https://www.mkdocs.org
+# Material theme: https://squidfunk.github.io/mkdocs-material/
+
+site_name: Video Clips Automation
+site_description: Sistema para geração automática de clips de vídeo com detecção de cenas e remoção de silêncio
+site_author: Video Clips Team
+site_url: https://github.com/user/clips_videos
+
+# Directory structure
+docs_dir: docs/mkdocs
+
+# Repository
+repo_url: https://github.com/user/clips_videos
+repo_name: clips_videos
+
+# Copyright
+copyright: Copyright © 2026 Video Clips Automation
+
+# Theme
+theme:
+  name: material
+  language: pt-br
+  palette:
+    primary: deep orange
+    accent: amber
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+# Plugins
+plugins:
+  - search
+
+# Navigation
+nav:
+  - Início: index.md
+  - Instalação:
+      - Instalação: setup/installation.md
+      - Configuração Inicial: setup/quick-start.md
+  - Guia do Usuário:
+      - Interface CLI: user-guide/cli.md
+      - Interface Gráfica (GUI): user-guide/gui.md
+      - Arquivo de Configuração: user-guide/config.md
+  - Funcionalidades:
+      - Detecção de Cenas: features/scene-detection.md
+      - Remoção de Silêncio: features/silence-removal.md
+      - Legendas Automáticas: features/subtitles.md
+      - Processamento em Lote: features/batch-processing.md
+  - Exemplos:
+      - Exemplos Práticos: examples/index.md
+  - Solução de Problemas: troubleshooting.md
+
+# Extra
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/user/clips_videos

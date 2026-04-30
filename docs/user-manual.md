@@ -2,8 +2,8 @@
 
 | Metadata | Valor |
 |----------|-------|
-| **Versão** | 1.0.0 |
-| **Data** | 2026-04-24 |
+| **Versão** | 1.0.1 |
+| **Data** | 2026-04-29 |
 
 ---
 
@@ -46,7 +46,39 @@ O Video Clips Automation é uma ferramenta que ajuda você a cortar vídeos auto
 - Python 3.10 ou superior
 - FFmpeg (para processamento de vídeo)
 
-### 2.2 Passos
+### 2.2 Dependências do Projeto
+
+| Pacote | Descrição |
+|--------|-----------|
+| **CLI** | |
+| click | Interface de linha de comando |
+| **GUI** | |
+| PyQt6 | Interface gráfica |
+| **Processamento de Vídeo** | |
+| opencv-python | Visão computacional |
+| imageio | Manipulação de imagens |
+| imageio-ffmpeg | Suporte FFmpeg |
+| ffmpeg-python | Interface FFmpeg |
+| **Processamento de Áudio** | |
+| scipy | Processamento científico |
+| **Machine Learning** | |
+| openai-whisper | Transcrição de áudio |
+| torch | Framework ML |
+| tiktoken | Tokenização |
+| numba | Compilação JIT |
+| **Numeração** | |
+| numpy | Cálculos numéricos |
+| **Testes** | |
+| pytest | Framework de testes |
+| pytest-cov | Cobertura de testes |
+| pytest-asyncio | Testes async |
+| **Utilitários** | |
+| tqdm | Barra de progresso |
+| python-dateutil | Utilitários de data |
+| colorama | Cores no terminal |
+| PyYAML | Configuração YAML |
+
+### 2.3 Passos de Instalação
 
 1. **Clone ou baixe o projeto:**
    ```bash
@@ -70,6 +102,17 @@ O Video Clips Automation é uma ferramenta que ajuda você a cortar vídeos auto
    - **Windows:** Baixe em https://ffmpeg.org/download.html
    - **Mac:** `brew install ffmpeg`
    - **Linux:** `sudo apt install ffmpeg`
+
+### 2.4 Verificação da Instalação
+
+```bash
+python -m src.cli.commands --version
+```
+
+Você deverá ver:
+```
+Video Clips Automation, version 1.0.0
+```
 
 ---
 
@@ -116,6 +159,7 @@ python -m src.cli.commands process <caminho_video> [OPÇÕES]
 |-------|------------|---------|
 | `--visual-cut` | Ativar detecção de cena | `--visual-cut` |
 | `--sensitivity` | Sensibilidade da detecção | `--sensitivity high` |
+| `--min-clip-duration` | Duração mínima do clip (ex: 4s = clips com mais de 4 segundos) | `--min-clip-duration 4` |
 | `--remove-silence` | Remover silêncio | `--remove-silence` |
 | `--silence-db` | Threshold de silêncio (dB) | `--silence-db -50` |
 | `--silence-duration` | Duração mínima do silêncio (s) | `--silence-duration 1.0` |
