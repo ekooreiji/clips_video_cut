@@ -94,6 +94,57 @@ class OpenCVAdapter:
         
         return scores, frame_indices
     
+    def compute_frame_diffs(
+        self,
+        video_path: Path,
+        sample_rate: int = 1
+    ) -> Tuple[List[float], List[int]]:
+        """
+        Calcula diferenças entre frames consecutivos para detectar scene cuts.
+        
+        Args:
+            video_path: Caminho do vídeo
+            sample_rate: Avaliar a cada N frames (1 = todos os frames)
+            
+        Returns:
+            Tupla de (differences, frame_indices)
+        """
+        if not video_path.exists():
+            raise VideoNotFoundError(str(video_path))
+        
+        cap = cv2.VideoCapture(str(video_path))
+        
+        if not cap.isOpened():
+            raise VideoCorruptedError(str(video_path))
+        
+        diffs = []
+        frame_indices = []
+        frame_id = 0
+        prev_frame = None
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if frame_id % sample_rate == 0 and prev_frame is not None:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+                
+                # Calcular diferença absoluta
+                diff = cv2.absdiff(prev_gray, gray)
+                score = np.mean(diff) / 255.0  # Normalizar para 0-1
+                
+                diffs.append(score)
+                frame_indices.append(frame_id)
+            
+            prev_frame = frame
+            frame_id += 1
+        
+        cap.release()
+        
+        return diffs, frame_indices
+    
     def detect_scene_changes(
         self,
         video_path: Path,

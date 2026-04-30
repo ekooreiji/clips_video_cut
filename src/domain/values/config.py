@@ -25,6 +25,9 @@ class VisualCutConfig:
     sensitivity: float = 1.0  # MEDIUM padrão
     sample_rate: int = 5  # analisa a cada N frames
     min_clip_duration: float = 0.0  # duração mínima do clip em segundos (0 = sem limite)
+    scene_cut_threshold: float = 0.5  # limiar para scene cut (0.0-1.0), padrão medium
+    min_scene_frames: int = 10  # frames mínimos por cena
+    detect_motion: bool = True  # detectar movimento
 
 
 @dataclass
@@ -101,7 +104,10 @@ class ProcessingConfig:
                 enabled=vc.get('enabled', True),
                 sensitivity=vc.get('sensitivity', 1.0),
                 sample_rate=vc.get('sample_rate', 5),
-                min_clip_duration=vc.get('min_clip_duration', 0.0)
+                min_clip_duration=vc.get('min_clip_duration', 0.0),
+                scene_cut_threshold=vc.get('scene_cut_threshold', 0.5),
+                min_scene_frames=vc.get('min_scene_frames', 10),
+                detect_motion=vc.get('detect_motion', True)
             )
         
         # Silence
@@ -154,7 +160,10 @@ class ProcessingConfig:
                     "enabled": self.visual_cut.enabled,
                     "sensitivity": self.visual_cut.sensitivity,
                     "sample_rate": self.visual_cut.sample_rate,
-                    "min_clip_duration": self.visual_cut.min_clip_duration
+                    "min_clip_duration": self.visual_cut.min_clip_duration,
+                    "scene_cut_threshold": self.visual_cut.scene_cut_threshold,
+                    "min_scene_frames": self.visual_cut.min_scene_frames,
+                    "detect_motion": self.visual_cut.detect_motion
                 },
                 "silence_removal": {
                     "enabled": self.silence.enabled,

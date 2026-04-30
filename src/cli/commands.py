@@ -113,6 +113,23 @@ def cli():
     help="Duração mínima do clip em segundos - apenas clips MAIORES que este valor serão gerados"
 )
 @click.option(
+    "--scene-cut-threshold",
+    type=float,
+    default=0.5,
+    help="Limiar para scene cut (0.0-1.0) - padrão 0.5 (medium). Ex: 0.6 para cortes mais bruscos"
+)
+@click.option(
+    "--min-scene-frames",
+    type=int,
+    default=10,
+    help="Frames mínimos por cena"
+)
+@click.option(
+    "--detect-motion/--no-detect-motion",
+    default=True,
+    help="Ativar detecção de movimento"
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -135,6 +152,9 @@ def process(
     config: Optional[str],
     batch: Optional[str],
     min_clip_duration: float,
+    scene_cut_threshold: float,
+    min_scene_frames: int,
+    detect_motion: bool,
     verbose: bool,
 ):
     """Processar vídeo para gerar clips automáticos"""
@@ -158,6 +178,9 @@ def process(
             "low": 0.3, "medium": 1.0, "high": 2.0
         }[sensitivity]
         processing_config.visual_cut.min_clip_duration = min_clip_duration
+        processing_config.visual_cut.scene_cut_threshold = scene_cut_threshold
+        processing_config.visual_cut.min_scene_frames = min_scene_frames
+        processing_config.visual_cut.detect_motion = detect_motion
         
         processing_config.silence.enabled = remove_silence
         processing_config.silence.db_threshold = silence_db

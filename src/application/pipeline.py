@@ -193,23 +193,34 @@ class VideoPipeline:
         logger.info(f"Config sensitivity: {self.config.visual_cut.sensitivity}")
         logger.info(f"Config sample_rate: {self.config.visual_cut.sample_rate}")
         logger.info(f"Config min_clip_duration: {self.config.visual_cut.min_clip_duration}")
+        logger.info(f"Config scene_cut_threshold: {self.config.visual_cut.scene_cut_threshold}")
+        logger.info(f"Config min_scene_frames: {self.config.visual_cut.min_scene_frames}")
+        logger.info(f"Config detect_motion: {self.config.visual_cut.detect_motion}")
         
         if not self.config.visual_cut.enabled:
             logger.info("Visual cut desabilitado, retornando []")
             return []
-        
+
         clips = self.scene_detector.detect(
             video_doc.path,
             sensitivity=self.config.visual_cut.sensitivity,
             sample_rate=self.config.visual_cut.sample_rate,
+            scene_cut_threshold=self.config.visual_cut.scene_cut_threshold,
+            min_scene_frames=self.config.visual_cut.min_scene_frames,
+            detect_motion=self.config.visual_cut.detect_motion,
         )
-        
+
+        # junta os arquivos antes de aplicar o filtro de duração mínima, 
+        # para evitar cortar cenas que foram divididas em vários 
+        # clips menores
+        clips = self._merge_clips(clips)
+
         # Filtrar por duração mínima
         min_duration = self.config.visual_cut.min_clip_duration
         if min_duration > 0:
             original_count = len(clips)
             clips = [c for c in clips if c.duration >= min_duration]
-            logger.info(f"Filtrados {original_count - len(clips)} clips maiores ou iguais a {min_duration}s")
+            logger.info(f"Filtrados {len(clips)} de {original_count} clips maiores ou iguais a {min_duration}s")
         
         logger.debug(f"Detectados {len(clips)} clips visuais")
         return clips
@@ -305,6 +316,10 @@ class VideoPipeline:
                 )
             else:
                 merged.append(clip)
+        
+        logger.info(
+            f"Clips mesclados: {len(clips)} -> {len(merged)}"
+        )
         
         # Re numerar
         for i, clip in enumerate(merged):
