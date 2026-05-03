@@ -346,7 +346,7 @@ def gui():
     """Abrir interface gráfica (GUI)"""
     
     try:
-        from src.gui.main_window import main
+        from src.gui.gui_manager import main
         main()
     except ImportError:
         click.echo("Erro: PyQt6 não está instalado", err=True)

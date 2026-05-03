@@ -1,0 +1,302 @@
+"""
+Main Window - Janela Principal GUI
+Interface gráfica principal usando PyQt6.
+"""
+from pathlib import Path
+from typing import Optional, List
+import sys
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+    QFileDialog,
+    QProgressBar,
+    QCheckBox,
+    QSpinBox,
+    QDoubleSpinBox,
+    QComboBox,
+    QGroupBox,
+    QTextEdit,
+    QMessageBox,
+) from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QIcon, QAction
+from src.application.pipeline import VideoPipeline
+from src.domain.values.config import ProcessingConfig
+from src.common.utils.logger import get_logger
+logger = get_logger(__name__)
+class ProcessingThread(QThread):
+    """Thread para processamento em background"""
+    progress = pyqtSignal(str)
+    finished = pyqtSignal(dict)
+    error = pyqtSignal(str)
+    def __init__(self, video_path: Path, config: ProcessingConfig):
+        super().__init__()
+        self.video_path = video_path
+        self.config = config
+    def run(self):
+        try:
+            self.progress.emit("Iniciando processamento...")
+            pipeline = VideoPipeline(config=self.config)
+            result = pipeline.process_single(self.video_path)
+            self.finished.emit(result)
+        except Exception as e:
+            self.error.emit(str(e))
+class MainWindow(QMainWindow):
+    """Janela principal da aplicação GUI."""
+    def __init__(self):
+        super().__init__()
+        self.video_path: Optional[Path] = None
+        self.config = ProcessingConfig()
+        self.worker: Optional[ProcessingThread] = None
+        self.init_ui()
+    def init_ui(self):
+        """Inicializa interface"""
+        self.setWindowTitle("Video Clips Automation")
+        self.setGeometry(100, 100, 900, 700)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        video_group = self.create_video_group()
+        main_layout.addWidget(video_group)
+        options_group = self.create_options_group()
+        main_layout.addWidget(options_group)
+        button_layout = self.create_button_layout()
+        main_layout.addWidget(button_layout)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        main_layout.addWidget(self.progress_bar)
+        self.log_text = QTextEdit()
+        self.log_text.setReadOnly(True)
+        self.log_text.setMaximumHeight(150)
+        main_layout.addWidget(self.log_text)
+    def create_video_group(self) -> QGroupBox:
+        """Cria grupo de seleção de vídeo"""
+        group = QGroupBox("Vídeo")
+        layout = QVBoxLayout()
+        self.video_label = QLabel("Nenhum vídeo selecionado")
+        self.video_label.setStyleSheet("color: gray; padding: 5px;")
+        select_button = QPushButton("Selecionar Vídeo")
+        select_button.clicked.connect(self.select_video)
+        layout.addWidget(self.video_label)
+        layout.addWidget(select_button)
+        group.setLayout(layout)
+        return group
+    def create_options_group(self) -> QGroupBox:
+        """Cria grupo de opções"""
+        group = QGroupBox("Opções de Processamento")
+        layout = QVBoxLayout()
+        # Corte visual
+        self.visual_cut_check = QCheckBox("Detectar mudanças de cena")
+        self.visual_cut_check.setChecked(True)
+        layout.addWidget(self.visual_cut_check)
+        # Sensibilidade
+        sensitivity_layout = QHBoxLayout()
+        sensitivity_layout.addWidget(QLabel("Sensibilidade:"))
+        self.sensitivity_combo = QComboBox()
+        self.sensitivity_combo.addItems(["Baixa", "Média", "Alta"])
+        self.sensitivity_combo.setCurrentText("Média")
+        sensitivity_layout.addWidget(self.sensitivity_combo)
+        sensitivity_layout.addStretch()
+        layout.addLayout(sensitivity_layout)
+        # Scene Cut Threshold
+        threshold_layout = QHBoxLayout()
+        threshold_layout.addWidget(QLabel("Scene Cut Threshold:"))
+        self.scene_threshold_spin = QDoubleSpinBox()
+        self.scene_threshold_spin.setRange(0.0, 1.0)
+        self.scene_threshold_spin.setSingleStep(0.1)
+        self.scene_threshold_spin.setValue(0.5)
+        threshold_layout.addWidget(self.scene_threshold_spin)
+        threshold_layout.addStretch()
+        layout.addLayout(threshold_layout)
+        # Min Scene Frames
+        frames_layout = QHBoxLayout()
+        frames_layout.addWidget(QLabel("Mín. Frames por Cena:"))
+        self.min_frames_spin = QSpinBox()
+        self.min_frames_spin.setRange(1, 100)
+        self.min_frames_spin.setValue(10)
+        frames_layout.addWidget(self.min_frames_spin)
+        frames_layout.addStretch()
+        layout.addLayout(frames_layout)
+        # Min Clip Duration
+        duration_layout = QHBoxLayout()
+        duration_layout.addWidget(QLabel("Mín. Duração Clip (s):"))
+        self.min_duration_spin = QDoubleSpinBox()
+        self.min_duration_spin.setRange(0.0, 60.0)
+        self.min_duration_spin.setSingleStep(0.5)
+        self.min_duration_spin.setValue(0.0)
+        duration_layout.addWidget(self.min_duration_spin)
+        duration_layout.addStretch()
+        layout.addLayout(duration_layout)
+        # Remover silêncio
+        self.silence_check = QCheckBox("Remover silêncio do áudio")
+        self.silence_check.stateChanged.connect(self.silence_toggled)
+        layout.addWidget(self.silence_check)
+        # Threshold de silêncio
+        silence_db_layout = QHBoxLayout()
+        silence_db_layout.addWidget(QLabel("Threshold (dB):"))
+        self.silence_db_spin = QSpinBox()
+        self.silence_db_spin.setRange(-60, -10)
+        self.silence_db_spin.setValue(-40)
+        self.silence_db_spin.setEnabled(False)
+        silence_db_layout.addWidget(self.silence_db_spin)
+        silence_db_layout.addStretch()
+        layout.addLayout(silence_db_layout)
+        # Normalizar áudio
+        self.normalize_check = QCheckBox("Normalizar volume")
+        layout.addWidget(self.normalize_check)
+        # Gerar legendas
+        self.subtitles_check = QCheckBox("Gerar legendas (Whisper)")
+        self.subtitles_check.stateChanged.connect(self.subtitles_toggled)
+        layout.addWidget(self.subtitles_check)
+        # Modelo Whisper
+        model_layout = QHBoxLayout()
+        model_layout.addWidget(QLabel("Modelo Whisper:"))
+        self.whisper_combo = QComboBox()
+        self.whisper_combo.addItems(["tiny", "base", "small", "medium"])
+        self.whisper_combo.setCurrentText("base")
+        self.whisper_combo.setEnabled(False)
+        model_layout.addWidget(self.whisper_combo)
+        model_layout.addStretch()
+        layout.addLayout(model_layout)
+        # Burn subtitles
+        self.burn_check = QCheckBox("Inserir legendas no vídeo")
+        self.burn_check.setEnabled(False)
+        layout.addWidget(self.burn_check)
+        # Destruir original
+        self.destroy_check = QCheckBox("Excluir arquivo original")
+        layout.addWidget(self.destroy_check)
+        group.setLayout(layout)
+        return group
+    def create_button_layout(self) -> QWidget:
+        """Cria layout de botões"""
+        widget = QWidget()
+        layout = QHBoxLayout()
+        self.preview_button = QPushButton("Visualizar Pontos de Corte")
+        self.preview_button.clicked.connect(self.run_preview)
+        self.preview_button.setEnabled(False)
+        layout.addWidget(self.preview_button)
+        self.process_button = QPushButton("Processar Vídeo")
+        self.process_button.clicked.connect(self.run_process)
+        self.process_button.setEnabled(False)
+        layout.addWidget(self.process_button)
+        self.cancel_button = QPushButton("Cancelar")
+        self.cancel_button.setEnabled(False)
+        layout.addWidget(self.cancel_button)
+        widget.setLayout(layout)
+        return widget
+    def select_video(self):
+        """Seleciona vídeo"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Selecionar Vídeo",
+            "",
+            "Vídeos (*.mp4 *.mkv *.avi *.mov *.webm)"
+        )
+        if file_path:
+            self.video_path = Path(file_path)
+            self.video_label.setText(str(self.video_path))
+            self.video_label.setStyleSheet("color: black; padding: 5px;")
+            self.preview_button.setEnabled(True)
+            self.process_button.setEnabled(True)
+            self.log(f"Vídeo selecionado: {self.video_path.name}")
+    def silence_toggled(self, state):
+        """Alterna opções de silêncio"""
+        enabled = state == Qt.CheckState.Checked.value
+        self.silence_db_spin.setEnabled(enabled)
+    def subtitles_toggled(self, state):
+        """Alterna opções de legendas"""
+        enabled = state == Qt.CheckState.Checked.value
+        self.whisper_combo.setEnabled(enabled)
+        self.burn_check.setEnabled(enabled)
+    def run_preview(self):
+        """Executa preview"""
+        if not self.video_path:
+            return
+        self.update_config_from_ui()
+        self.log("Gerando preview...")
+        try:
+            pipeline = VideoPipeline(config=self.config)
+            result = pipeline.preview(self.video_path)
+            self.log(f"{result['clips_detected']} pontos de corte detectados")
+            for clip in result['clips']:
+                self.log(
+                    f"  Clip {clip['id']}: {clip['start_time']:.2f}s - "
+                    f"{clip['end_time']:.2f}s ({clip['reason']})"
+                )
+        except Exception as e:
+            self.log(f"Erro: {e}", error=True)
+            QMessageBox.critical(self, "Erro", str(e))
+    def run_process(self):
+        """Executa processamento"""
+        if not self.video_path:
+            return
+        self.update_config_from_ui()
+        self.process_button.setEnabled(False)
+        self.preview_button.setEnabled(False)
+        self.cancel_button.setEnabled(True)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)
+        self.worker = ProcessingThread(self.video_path, self.config)
+        self.worker.progress.connect(self.log)
+        self.worker.finished.connect(self.processing_finished)
+        self.worker.error.connect(self.processing_error)
+        self.worker.start()
+        self.log("Processando...")
+    def update_config_from_ui(self):
+        """Atualiza configuração da UI"""
+        sensitivity_map = {"Baixa": 0.3, "Média": 1.0, "Alta": 2.0}
+        self.config.visual_cut.enabled = self.visual_cut_check.isChecked()
+        self.config.visual_cut.sensitivity = sensitivity_map[
+            self.sensitivity_combo.currentText()
+        ]
+        self.config.visual_cut.scene_cut_threshold = self.scene_threshold_spin.value()
+        self.config.visual_cut.min_scene_frames = self.min_frames_spin.value()
+        self.config.visual_cut.min_clip_duration = self.min_duration_spin.value()
+        self.config.silence.enabled = self.silence_check.isChecked()
+        self.config.silence.db_threshold = self.silence_db_spin.value()
+        self.config.normalization.enabled = self.normalize_check.isChecked()
+        self.config.subtitles.enabled = self.subtitles_check.isChecked()
+        self.config.subtitles.whisper_model = self.whisper_combo.currentText()
+        self.config.subtitles.burn = self.burn_check.isChecked()
+        self.config.output.keep_original = not self.destroy_check.isChecked()
+    def processing_finished(self, result: dict):
+        """Finaliza processamento"""
+        self.log(f"Processamento concluído: {result['clips_detected']} clips")
+        self.log(f"Arquivos salvos em: {result['report_path']}")
+        self.process_button.setEnabled(True)
+        self.preview_button.setEnabled(True)
+        self.cancel_button.setEnabled(False)
+        self.progress_bar.setVisible(False)
+        QMessageBox.information(
+            self,
+            "Sucesso",
+            f"{result['clips_detected']} clips gerados com sucesso!"
+        )
+    def processing_error(self, error: str):
+        """Erro no processamento"""
+        self.log(f"Erro: {error}", error=True)
+        self.process_button.setEnabled(True)
+        self.preview_button.setEnabled(True)
+        self.cancel_button.setEnabled(False)
+        self.progress_bar.setVisible(False)
+        QMessageBox.critical(self, "Erro", error)
+    def log(self, message: str, error: bool = False):
+        """Adiciona mensagem ao log"""
+        if error:
+            self.log_text.append(f"<span style='color: red;'>[ERRO] {message}</span>")
+        else:
+            self.log_text.append(message)
+        logger.info(message)
+def main():
+    """Ponto de entrada da GUI"""
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
+if __name__ == "__main__":
+    main()
